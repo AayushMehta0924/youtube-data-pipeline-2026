@@ -34,7 +34,7 @@
 			"Sid": "SNSAccess",
 			"Effect": "Allow",
 			"Action": "sns:Publish",
-			"Resource": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-*"
+			"Resource": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev:b3c60bcf-fb3a-4e79-a002-309b18264aba*"
 		},
 		{
 			"Sid": "AthenaAccess",
