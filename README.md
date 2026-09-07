@@ -48,6 +48,8 @@ glue_jobs/
 lambdas/
   youtube_api_ingestion/   Bronze layer: pulls trending videos + categories from the YouTube API
   json_to_parquet/         Silver layer: converts raw JSON reference data to partitioned Parquet
+data_quality/
+  dq_lambda.py             Data Quality Gate: validates silver tables before gold aggregation
 scripts/
   aws_copy.sh              One-off bulk upload of the Kaggle CSV/JSON dataset to bronze
   information.md           Bucket names, Glue database names, SNS topic ARN
@@ -62,7 +64,7 @@ data/                      Raw Kaggle source files (git-ignored, not tracked)
 - [x] Silver — Lambda: JSON reference data → Parquet
 - [x] Silver — Glue cleansing ETL for CSV video stats → Parquet
 - [ ] Glue Crawlers (bronze) and Data Catalog registration
-- [ ] Data Quality Gate Lambda + SNS failure/success alerting
+- [x] Data Quality Gate Lambda + SNS failure/success alerting
 - [ ] Gold — Glue aggregation ETL (trending / channel / category analytics)
 - [ ] Step Functions orchestration
 - [ ] Athena queries / QuickSight dashboards
