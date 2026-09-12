@@ -51,6 +51,8 @@ lambdas/
   json_to_parquet/         Silver layer: converts raw JSON reference data to partitioned Parquet
 data_quality/
   dq_lambda.py             Data Quality Gate: validates silver tables before gold aggregation
+step_functions/
+  pipeline_orchestration.json   State machine: ingestion -> silver (parallel) -> DQ gate -> gold -> SNS notify
 scripts/
   aws_copy.sh              One-off bulk upload of the Kaggle CSV/JSON dataset to bronze
   information.md           Bucket names, Glue database names, SNS topic ARN
@@ -67,7 +69,7 @@ data/                      Raw Kaggle source files (git-ignored, not tracked)
 - [ ] Glue Crawlers (bronze) and Data Catalog registration
 - [x] Data Quality Gate Lambda + SNS failure/success alerting
 - [x] Gold — Glue aggregation ETL (trending / channel / category analytics)
-- [ ] Step Functions orchestration
+- [x] Step Functions orchestration
 - [ ] Athena queries / QuickSight dashboards
 - [ ] CloudWatch logging & monitoring setup
 
