@@ -177,7 +177,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {
-        "TopicArn": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev:b3c60bcf-fb3a-4e79-a002-309b18264aba",
+        "TopicArn": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev",
         "Subject": "[YT Pipeline] Pipeline completed successfully",
         "Message.$": "States.Format('Pipeline run {} completed. All layers updated.', $$.Execution.Id)"
       },
@@ -188,7 +188,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {
-        "TopicArn": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev:b3c60bcf-fb3a-4e79-a002-309b18264aba",
+        "TopicArn": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev",
         "Subject": "[YT Pipeline] FAILURE — Ingestion step failed",
         "Message.$": "States.JsonToString($.error)"
       },
@@ -199,7 +199,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {
-        "TopicArn": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev:b3c60bcf-fb3a-4e79-a002-309b18264aba",
+        "TopicArn": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev",
         "Subject": "[YT Pipeline] FAILURE — Transform step failed",
         "Message.$": "States.JsonToString($.error)"
       },
@@ -210,7 +210,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {
-        "TopicArn": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev:b3c60bcf-fb3a-4e79-a002-309b18264aba",
+        "TopicArn": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev",
         "Subject": "[YT Pipeline] WARNING — Data quality checks failed",
         "Message.$": "States.JsonToString($.dq_result)"
       },
@@ -221,7 +221,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {
-        "TopicArn": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev:b3c60bcf-fb3a-4e79-a002-309b18264aba",
+        "TopicArn": "arn:aws:sns:us-east-1:432510057324:yt-data-pipeline-alerts-dev",
         "Subject": "[YT Pipeline] FAILURE — Gold aggregation failed",
         "Message.$": "States.JsonToString($.error)"
       },
