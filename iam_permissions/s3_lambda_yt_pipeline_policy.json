@@ -42,7 +42,8 @@
 			"Action": [
 				"athena:StartQueryExecution",
 				"athena:GetQueryExecution",
-				"athena:GetQueryResults"
+				"athena:GetQueryResults",
+				"athena:GetWorkGroup"
 			],
 			"Resource": "*"
 		}
