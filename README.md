@@ -45,6 +45,7 @@ Amazon Athena and Amazon QuickSight query the gold tables.
 iam_permissions/   IAM policy JSON for Lambda/Glue access to S3, SNS, Athena
 glue_jobs/
   bronze_to_silver_statistics.py   Silver layer: cleanses/dedupes bronze video stats to Parquet
+  silver_to_gold_analytics.py      Gold layer: builds trending/channel/category analytics tables
 lambdas/
   youtube_api_ingestion/   Bronze layer: pulls trending videos + categories from the YouTube API
   json_to_parquet/         Silver layer: converts raw JSON reference data to partitioned Parquet
@@ -65,7 +66,7 @@ data/                      Raw Kaggle source files (git-ignored, not tracked)
 - [x] Silver — Glue cleansing ETL for CSV video stats → Parquet
 - [ ] Glue Crawlers (bronze) and Data Catalog registration
 - [x] Data Quality Gate Lambda + SNS failure/success alerting
-- [ ] Gold — Glue aggregation ETL (trending / channel / category analytics)
+- [x] Gold — Glue aggregation ETL (trending / channel / category analytics)
 - [ ] Step Functions orchestration
 - [ ] Athena queries / QuickSight dashboards
 - [ ] CloudWatch logging & monitoring setup
