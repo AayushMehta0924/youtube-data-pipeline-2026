@@ -15,3 +15,7 @@ Glue Gold: yt_pipeline_gold_dev
 --silver_bucket aayush-yt-data-pipeline-silver-us-east-1-dev
 --silver_database yt_pipeline_silver_dev
 --silver_table clean_statistics
+
+--silver_database yt_pipeline_silver_dev
+--gold_bucket aayush-yt-data-pipeline-gold-us-east-1-dev
+--gold_database yt_pipeline_gold_dev
