@@ -98,6 +98,11 @@ try:
         if "category_id" in stats_df.columns:
             stats_df = stats_df.withColumn("category_id", F.col("category_id").cast("long"))
 
+        # broadcast() ships the small category-lookup table to every Spark
+        # worker instead of shuffling the much larger stats table across the
+        # cluster to do the join — a standard optimization for joining a big
+        # table against a small one. how="left" keeps every stat row even if
+        # its category_id has no match (handled by the fillna below).
         stats_df = stats_df.join(
             F.broadcast(category_lookup),
             on="category_id",
@@ -168,7 +173,9 @@ channel = stats_df.groupBy("channel_title", "region").agg(
     F.collect_set("category_name").alias("categories"),
 )
 
-# Rank channels by total views within each region
+# Rank channels by total views within each region.
+# Window functions let us rank "within a group" (per-region here) without
+# collapsing the groupBy result the way a second groupBy/join would.
 window_rank = Window.partitionBy("region").orderBy(F.col("total_views").desc())
 channel = channel.withColumn("rank_in_region", F.row_number().over(window_rank))
 channel = channel.withColumn("_aggregated_at", F.current_timestamp())
@@ -202,7 +209,11 @@ category = stats_df.groupBy("category_name", "category_id", "region", "trending_
     F.countDistinct("channel_title").alias("unique_channels"),
 )
 
-# Category share of views per region per day
+# Category share of views per region per day.
+# window_total (no orderBy) sums total_views across every category row that
+# shares the same region+date, giving each row the group's grand total to
+# divide by — this is how "% of daily total" gets computed without a
+# separate aggregate-then-join step.
 window_total = Window.partitionBy("region", "trending_date_parsed")
 category = category.withColumn(
     "view_share_pct",

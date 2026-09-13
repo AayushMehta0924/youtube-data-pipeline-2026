@@ -38,6 +38,8 @@ MAX_VIEWS = 50_000_000_000  # 50B — sanity check for view counts
 FRESHNESS_HOURS = 48  # Data should be no older than this
 
 
+# Per-table list of columns that must exist and stay (mostly) non-null.
+# Used by both check_null_percentage and check_schema below.
 CRITICAL_COLUMNS = {
     "clean_statistics": ["video_id", "title", "channel_title", "views", "region"],
     "clean_reference_data": ["id", "region"],
@@ -184,7 +186,11 @@ def lambda_handler(event, context):
         logger.info(f"Running DQ checks on {database}.{table_name}...")
 
         try:
-            # Read a sample of the data (limit for cost/speed)
+            # We don't need the whole table to judge its health — a 10k-row
+            # sample is enough for these checks and keeps the Athena query
+            # (which is billed by data scanned) fast and cheap.
+            # ctas_approach=False = plain SELECT instead of a temp CTAS table,
+            # since we're not asking for anything Athena needs to materialize.
             query = f'SELECT * FROM "{table_name}" LIMIT 10000'
             df = wr.athena.read_sql_query(
                 sql=query,
@@ -230,6 +236,11 @@ def lambda_handler(event, context):
             Message=json.dumps(failed, indent=2, default=str),
         )
 
+    # Step Functions' Choice state reads "quality_passed" to decide whether to
+    # run the Gold job or route to the failure-notification branch — so this
+    # return shape is a contract with pipeline_orchestration.json, not just a
+    # log. The json.dumps/loads round-trip on "details" strips out any
+    # non-JSON-safe numpy/pandas types before Step Functions tries to parse it.
     return {
         "quality_passed": bool(overall_passed),
         "checks_passed": int(passed_count),

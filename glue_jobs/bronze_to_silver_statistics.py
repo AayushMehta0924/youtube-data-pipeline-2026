@@ -72,6 +72,9 @@ logger.info(f"Silver: {SILVER_DB}.{SILVER_TABLE} → {SILVER_PATH}")
 logger.info("Reading from Bronze catalog...")
 
 # Predicate pushdown — include both upper and lowercase to handle either partition format
+# This filters at the Glue Catalog partition level *before* any data is read,
+# so Spark only scans the S3 partitions for these regions instead of the whole
+# bronze table — much cheaper than reading everything and filtering after.
 predicate = "region in ('ca','gb','us', 'in')"
 
 datasource = glueContext.create_dynamic_frame.from_catalog(
@@ -95,7 +98,11 @@ else:
     columns = set(df.columns)
 
     if "snippet.title" in columns or "snippet__title" in columns:
-        # YouTube API format — flatten nested structure
+        # YouTube API format — flatten nested structure.
+        # The live API's nested JSON (snippet.title, statistics.viewCount, ...)
+        # gets crawled into dotted or double-underscore column names depending
+        # on the Glue Crawler version/settings, so every column below picks
+        # whichever variant actually exists rather than assuming one.
         logger.info("Detected YouTube API format — flattening...")
         df = df.select(
             F.col("id").alias("video_id"),
@@ -198,7 +205,10 @@ else:
     # ── Step 4: Deduplication ───────────────────────────────────────────────
     logger.info("Deduplicating...")
 
-    # Keep the latest record per video_id + region + trending_date
+    # Keep the latest record per video_id + region + trending_date.
+    # A video can appear in multiple ingestion runs (e.g. still trending
+    # hours later), so we number rows within each group newest-first and
+    # keep only row #1 — a "SELECT DISTINCT ON" pattern done via window functions.
     from pyspark.sql.window import Window
 
     window = Window.partitionBy("video_id", "region", "trending_date_parsed") \
@@ -232,9 +242,13 @@ else:
     # ── Step 6: Write to Silver Layer ───────────────────────────────────────
     logger.info(f"Writing to Silver: {SILVER_PATH}")
 
-    # Convert back to DynamicFrame for Glue-native write
+    # Convert back to DynamicFrame — Glue's native sink/catalog APIs only
+    # accept DynamicFrames, not plain Spark DataFrames.
     dynamic_frame = DynamicFrame.fromDF(df, glueContext, "silver_statistics")
 
+    # enableUpdateCatalog + updateBehavior register/refresh this table in the
+    # Glue Data Catalog as part of the write, so — like the Lambda writes —
+    # Athena can query the new data without a separate crawler run.
     sink = glueContext.getSink(
         connection_type="s3",
         path=SILVER_PATH,

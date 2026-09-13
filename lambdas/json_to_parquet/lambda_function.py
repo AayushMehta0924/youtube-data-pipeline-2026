@@ -82,6 +82,7 @@ def validate_category_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def send_alert(subject: str, message: str):
+    """Publish a failure notice to SNS (no-op if no topic is configured)."""
     if SNS_TOPIC:
         sns_client.publish(TopicArn=SNS_TOPIC, Subject=subject[:100], Message=message)
 
@@ -89,10 +90,12 @@ def send_alert(subject: str, message: str):
 def lambda_handler(event, context):
     """Process S3 event for new JSON reference files."""
 
-    # Handle both direct S3 events and EventBridge-wrapped events
+    # A real S3 trigger wraps everything in a "Records" list (can contain
+    # multiple files if several were uploaded close together). If "Records"
+    # is missing, assume this was a manual/Step-Functions test invocation
+    # that passed a single S3-shaped event directly.
     records = event.get("Records", [])
     if not records:
-        # Could be invoked directly by Step Functions
         records = [event] if "s3" in event else []
 
     processed = []
@@ -102,6 +105,8 @@ def lambda_handler(event, context):
         try:
             s3_info = record["s3"]
             bucket = s3_info["bucket"]["name"]
+            # S3 event keys are URL-encoded (spaces become "+", etc.) — unquote_plus
+            # turns the key back into the real object path before we read it.
             key = unquote_plus(s3_info["object"]["key"])
 
             logger.info(f"Processing: s3://{bucket}/{key}")
@@ -141,6 +146,11 @@ def lambda_handler(event, context):
             logger.info(f"  Clean shape: {df.shape}, region: {region}")
 
             # ── Write to Silver layer as Parquet ─────────────────────────
+            # dataset=True + database/table also registers this write in the
+            # Glue Data Catalog, so Athena can query it immediately with no
+            # separate crawler run needed. mode="overwrite_partitions" means
+            # re-running this Lambda for the same region safely replaces that
+            # region's data instead of appending duplicate rows.
             wr_response = wr.s3.to_parquet(
                 df=df,
                 path=SILVER_PATH,

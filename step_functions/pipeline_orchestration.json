@@ -3,6 +3,7 @@
   "StartAt": "IngestFromYouTubeAPI",
   "States": {
     "IngestFromYouTubeAPI": {
+      "Comment": "Bronze step: invoke the ingestion Lambda to pull trending videos + categories from the YouTube API into S3.",
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
@@ -46,6 +47,7 @@
           "StartAt": "TransformReferenceData",
           "States": {
             "TransformReferenceData": {
+              "Comment": "Silver branch A: Lambda converts the small JSON category-reference files to Parquet.",
               "Type": "Task",
               "Resource": "arn:aws:states:::lambda:invoke",
               "Parameters": {
@@ -71,6 +73,7 @@
           "StartAt": "RunBronzeToSilverGlueJob",
           "States": {
             "RunBronzeToSilverGlueJob": {
+              "Comment": "Silver branch B: the heavier PySpark job that cleans/dedupes the CSV+JSON video statistics. Runs at the same time as TransformReferenceData since they don't depend on each other. The '.sync' suffix on Resource makes Step Functions wait for the Glue job to actually finish, instead of firing it and moving on immediately.",
               "Type": "Task",
               "Resource": "arn:aws:states:::glue:startJobRun.sync",
               "Parameters": {
@@ -109,6 +112,7 @@
     },
 
     "RunDataQualityChecks": {
+      "Comment": "Quality gate: query Silver via Athena and check row count, nulls, schema, value ranges, and freshness before Gold is allowed to run.",
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
@@ -132,6 +136,7 @@
     },
 
     "EvaluateDataQuality": {
+      "Comment": "Branch point: reads the quality_passed boolean the DQ Lambda returned. True -> proceed to Gold. Anything else -> Default route to the DQ-failure notification.",
       "Type": "Choice",
       "Choices": [
         {
@@ -144,6 +149,7 @@
     },
 
     "RunSilverToGoldGlueJob": {
+      "Comment": "Gold step: PySpark job joins/aggregates Silver into trending_analytics, channel_analytics, and category_analytics.",
       "Type": "Task",
       "Resource": "arn:aws:states:::glue:startJobRun.sync",
       "Parameters": {
@@ -174,6 +180,7 @@
     },
 
     "NotifySuccess": {
+      "Comment": "Reached only if every prior step succeeded — the pipeline's happy-path ending.",
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {
@@ -185,6 +192,7 @@
     },
 
     "NotifyIngestionFailure": {
+      "Comment": "Reached via IngestFromYouTubeAPI's Catch — the YouTube API call or bronze write failed.",
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {
@@ -196,6 +204,7 @@
     },
 
     "NotifyTransformFailure": {
+      "Comment": "Reached via ProcessInParallel's Catch — either the reference-data Lambda or the bronze-to-silver Glue job failed.",
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {
@@ -207,6 +216,7 @@
     },
 
     "NotifyDQFailure": {
+      "Comment": "Reached via EvaluateDataQuality's Default — Silver ran fine but failed one or more quality checks; Gold is intentionally skipped.",
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {
@@ -218,6 +228,7 @@
     },
 
     "NotifyGoldFailure": {
+      "Comment": "Reached via RunSilverToGoldGlueJob's Catch — quality passed but the final aggregation job itself failed.",
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {

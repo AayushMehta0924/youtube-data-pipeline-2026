@@ -39,7 +39,7 @@ BUCKET = os.environ["S3_BUCKET_BRONZE"]
 REGIONS = os.environ.get("YOUTUBE_REGIONS", "US,GB,CA,DE,FR,IN,JP,KR,MX,RU").split(",")
 SNS_TOPIC = os.environ.get("SNS_ALERT_TOPIC_ARN", "")
 API_BASE = "https://www.googleapis.com/youtube/v3"
-MAX_RESULTS = 50
+MAX_RESULTS = 50  # YouTube API page size cap for "mostPopular" chart per request
 
 
 def fetch_trending_videos(region_code: str) -> dict:
@@ -47,6 +47,9 @@ def fetch_trending_videos(region_code: str) -> dict:
     Call the YouTube Data API to get the current trending videos
     for a given region.
     """
+    # "chart": "mostPopular" is the API's official trending feed per region;
+    # snippet/statistics/contentDetails are the parts that give us title,
+    # view/like counts, and duration in one call instead of three.
     params = urlencode({
         "part": "snippet,statistics,contentDetails",
         "chart": "mostPopular",
@@ -117,6 +120,8 @@ def lambda_handler(event, context):
     results = {"success": [], "failed": []}
 
     for region in REGIONS:
+        # Lowercase so S3 partition keys (region=us) stay consistent no matter
+        # how the env var was typed (US, us, Us all collapse to the same folder).
         region = region.strip().lower()
         logger.info(f"Processing region: {region}")
 
@@ -154,6 +159,8 @@ def lambda_handler(event, context):
             logger.error(f"  Unexpected error for {region} trending: {e}")
             results["failed"].append({"region": region, "type": "trending", "error": str(e)})
             continue
+        # `continue` above skips straight to the next region — if trending
+        # videos failed there's no point also fetching that region's categories.
 
         # ── Fetch category reference data ────────────────────────────────
         try:
